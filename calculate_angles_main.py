@@ -43,15 +43,15 @@ def parse_to_entities(table):
             n = row[1]
             # append the first sequence of an entity
             array_of_models[-1].entities[-1].sequences.append(
-                Sequence(row[8], row[9], row[11], row[12], row[0] == "HETATM"))
+                Sequence(row[8], row[9], row[11], row[12], row[0] == "HETATM", row[14]))
             m = row[2]
         if row[2] != m:  # sequences
             array_of_models[-1].entities[-1].sequences.append(
-                Sequence(row[8], row[9], row[11], row[12], row[0] == "HETATM"))
+                Sequence(row[8], row[9], row[11], row[12], row[0] == "HETATM", row[14]))
             m = row[2]
         if row[7] not in array_of_models[-1].entities[-1].sequences[-1].SequenceVariants:  # new sequence variant
             array_of_models[-1].entities[-1].sequences[-1].SequenceVariants[row[7]] = \
-                SequenceVariant(row[8], row[9], row[7], row[11], row[12], row[0] == "HETATM")
+                SequenceVariant(row[8], row[9], row[7], row[11], row[12], row[0] == "HETATM",row[14])
         # adding an atom into a sequence variant
         array_of_models[-1].entities[-1].sequences[-1].SequenceVariants[row[7]].atoms.update(
             {remove_quotation_marks(row[3]): Atom(row)})
@@ -83,8 +83,8 @@ def operate_cif_file():
          "_atom_site.Cartn_x",
          "_atom_site.Cartn_y", "_atom_site.Cartn_z", "_atom_site.label_alt_id", "_atom_site.auth_asym_id",
          "_atom_site.auth_comp_id", "_atom_site.pdbx_PDB_model_num", "_atom_site.auth_seq_id",
-         "_atom_site.pdbx_PDB_ins_code", "_atom_site.type_symbol"])
-
+         "_atom_site.pdbx_PDB_ins_code", "_atom_site.type_symbol","_atom_site.label_asym_id"])
+    
 
 def check_if_sequence_is_valid_and_add_basic_information(array_of_models):
     """
@@ -148,17 +148,8 @@ def split_into_entities_and_calculate_parameters():
     return models_array, meta_data
 
 
-def get_cif_name():
-    # the cif can have ".cif" or ".gz" ending
-    if sys.argv[1][-2:] != "gz":
-        return sys.argv[1][:-4]
-    else:
-        return sys.argv[1][:-3]
-
-
-
 def write_to_csv():
-    with open(get_cif_name() + '.csv', 'w', newline='') as file:
+    with open("my_csvs/" + get_cif_name() + '.csv', 'w', newline='') as file:
         writer = csv.writer(file, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
         writer.writerow(["step_ID", "d1", "e1", "z1", "a2", "b2", "g2", "d2", "ch1", "ch2", "NN", "CC", "mu", "P1",
                          "t1", "Pn1", "P2", "t2", "Pn2", "nu11", "nu12", "nu13", "nu14", "nu15", "nu21", "nu22", "nu23",
@@ -181,12 +172,10 @@ def write_to_csv():
 
 def get_meta_data(cif_file):
     rows = np.transpose(cif_file)
-    asym = {"chains":list(set(rows[8]))} # to get rid of multiplicity
+    asym = {"chains":list(set([x[8] for x in np.transpose(rows) if len(x[9])==2]))} # to get rid of multiplicity
     alt_pos = {"alt_pos":list(set(rows[7]))}
-    num_protein_atoms = {"num_protein_atoms":len(rows[1])}
-    num_hetero_atoms = {"num_hetero_atoms":list(rows[0]).count("HETATM")}
     num_models = {"num_models" : len(set(rows[10]))}
-    return [asym, alt_pos, num_protein_atoms, num_hetero_atoms, num_models]
+    return [asym, alt_pos, num_models]
 
 
 _models_array, meta_data = split_into_entities_and_calculate_parameters()

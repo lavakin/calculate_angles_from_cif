@@ -92,18 +92,19 @@ class Taus:
 
 
 class Sequence:
-    def __init__(self, asym_id, comp_id, seq_number, inscode, is_hetatom):
+    def __init__(self, asym_id, comp_id, seq_number, inscode, is_hetatom, l_asym_id):
         self.SequenceVariants: {str: SequenceVariant} = {
-            ".": SequenceVariant(asym_id, comp_id, ".", seq_number, inscode, is_hetatom)}
+            ".": SequenceVariant(asym_id, comp_id, ".", seq_number, inscode, is_hetatom, l_asym_id)}
 
 
 class Name:
-    def __init__(self, asym_id, comp_id, alt_id, seq_number, inscode):
+    def __init__(self, asym_id, comp_id, alt_id, seq_number, inscode, l_asym_id):
         self.seq_number = seq_number
         self.auth_asym_id = asym_id
         self.auth_comp_id = comp_id
         self.label_alt_id = alt_id
         self.inscode = inscode
+        self.label_asym_id = l_asym_id
 
     # redefining "==" to equality of properties
     def __eq__(self, other):
@@ -114,11 +115,11 @@ class Name:
 
 
 class SequenceVariant:
-    def __init__(self, asym_id, comp_id, alt_id, seq_number, inscode, is_hetatom):
+    def __init__(self, asym_id, comp_id, alt_id, seq_number, inscode, is_hetatom, l_asym_id):
         self.atoms: {str: Atom} = {}
         self.is_valid = True
         self.base_type = None
-        self.name = Name(asym_id, comp_id, alt_id, seq_number, inscode)
+        self.name = Name(asym_id, comp_id, alt_id, seq_number, inscode, l_asym_id)
         self.is_hetatom = is_hetatom
 
 
@@ -306,11 +307,11 @@ previous_comp_id = ""
 
 
 def get_cif_name():
-    # the cif can have ".cif" or ".gz" ending
-    if sys.argv[1][-2:] != "gz":
-        return sys.argv[1][:-4]
-    else:
-        return sys.argv[1][:-3]
+    doc = cif.read(sys.argv[1])
+    block = doc[0]
+    entities = np.array(block.find(
+        ["_entry.id"]))[0][0].lower()
+    return entities
 
 
 

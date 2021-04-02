@@ -43,7 +43,7 @@ def get_name_of_sequence(auth_asym_id, comp, seq_number):
     label_alt_id = "." if len(splitted_comp) == 1 else splitted_comp[1][:]
     splitted_seq_number = seq_number.split(".")
     inscode = "?" if len(splitted_seq_number) == 1 else splitted_seq_number[1][:]
-    return Name(auth_asym_id, splitted_comp[0], label_alt_id, splitted_seq_number[0], inscode)
+    return Name(auth_asym_id, splitted_comp[0], label_alt_id, splitted_seq_number[0], inscode, "")
 
 
 
