@@ -2,25 +2,44 @@
 import sys
 import math
 from math import degrees
-import gemmi
 from gemmi import cif
 import numpy as np
 import csv
-import locale
 from copy import *
-from locale import atof
 import get_seq_from_ID_lbr as seq_id
 from dint_golden_parameters import *
 import json
 import rmsd
-import numpy as np
 from array import array
 from classes_for_angle_calculation import *
+import os
 
+
+
+def periodic_distance(angle, angle2):
+    return min(abs(angle2 - angle), 360 - (abs(angle2 - angle)))
 
 def calculate_euclidean_distance(dinc_tors: list, dinc_NCCN: list, step: list):
-    dinc = [int(x) for x in dinc_tors] + [int(x) * 32 for x in dinc_NCCN]
-    return round(np.linalg.norm(np.array(dinc) - np.array(step)),2)
+    p = [periodic_distance(x,y) for (x,y) in zip(dinc_tors, step)] + [(abs(x-y)*32) for (x,y) in zip(dinc_NCCN[:-1], step[-3:-1])] + [periodic_distance(dinc_NCCN[-1],step[-1])]
+    p = math.sqrt(sum(x**2 for x in p))
+    return round(p,2)
+    #return round(np.linalg.norm(np.array(dinc) - np.array(step)),2)
+
+"""
+def euclid():
+    for torsidx, torsion in enumerate(torsions[0:9]):
+    euclid += (distance_two_angles(float(data_matrix[num_steps - 1][torsion]),
+                                    DINT_BBTORS_MEAN[DINT_CLASS_INT[ntc][0]][torsidx])) ** 2.0
+    for torsidx, torsion in enumerate(torsions[9:12]):
+        if (torsidx < 2):
+            euclid += (dist_multiplier * distance_two_angles(
+                float(data_matrix[num_steps - 1][torsion]),
+                DINT_NCCN_MEAN[DINT_CLASS_INT[ntc][0]][torsidx])) ** 2.0
+        else:
+            euclid += (distance_two_angles(float(data_matrix[num_steps - 1][torsion]),
+                                            DINT_NCCN_MEAN[DINT_CLASS_INT[ntc][0]][torsidx])) ** 2.0
+    eucl_dict[step_ID][ntc] = "%.1f" % (math.sqrt(euclid))
+"""
 
 
 ntcs = list(DINT_CLASS_INT.keys())[1:]
@@ -47,9 +66,16 @@ def GetNamesWithIndexes(entity, start_index):
 
 
 def MakeJSON(models: [Model], meta_data, name):
+    print(os.getcwd())
+    if not os.path.exists(os.getcwd()+'/my_jsons'):
+        os.mkdir(os.getcwd()+"/my_jsons")
+    doc = cif.read(name)
+    block = doc[0]
     main_dict = {}
+    title = np.array(block.find(["_entity.pdbx_description"]))[0][0][1:-1]
     het_at = get_proteins_and_het()
-    with open( "my_jsons/" + get_cif_name()+".json", "w") as json_file:
+
+    with open(os.getcwd() + "/my_jsons/"+ get_cif_name()+".json", "w") as json_file:
         names_with_indexes, euclid_distance = get_stepnrs_altpos_euclid(models)
         main_dict["stepnrs"] = names_with_indexes
         main_dict["eucl_dict"] = euclid_distance
@@ -57,6 +83,7 @@ def MakeJSON(models: [Model], meta_data, name):
         main_dict["pdbid"]= get_cif_name()
         main_dict["rmsd_dict"] = rmsd
         main_dict["C503_dict"] = C503
+        main_dict["struct_title"] = str(title)
         main_dict["steps"] = properties
         main_dict["prevnextids"] = get_prev_next(models)
         main_dict.update(steps_amount)
@@ -97,16 +124,18 @@ def get_prev_next(models):
                         if len(dic[i]) == 1:
                             p = dic[keys[keys.index(i)-1]][0]
                         else:
-                            p = next(x for x in dic[keys[keys.index(i)-1]] if parse_id_altpos(x)[1] == parse_id_altpos(name)[0])
+                            p = next(x for x in dic[keys[keys.index(i)-1]] if parse_id_altpos(x)[1] == parse_id_altpos(name)[0] or len(dic[keys[keys.index(i)-1]])==1)
                     else:
                         p = ""
                     prv_n_steps[name].update({'p':p})
                                              
-                    if i != len(dic):
+                    if keys.index(i) < len(dic)-1:
                         if len(dic[i]) == 1:
                             n = dic[keys[keys.index(i)+1]][0]
                         else:
-                            n = next(x for x in dic[keys[keys.index(i)+1]] if parse_id_altpos(x)[0] == parse_id_altpos(name)[1])
+                            
+                            n = next(x for x in dic[keys[keys.index(i)+1]] if parse_id_altpos(x)[0] == parse_id_altpos(name)[1] or len(dic[keys[keys.index(i)+1]])==1)
+                        
                     else:
                         n = ""
                     prv_n_steps[name].update({'n':n})
@@ -222,7 +251,6 @@ def get_proteins_and_het():
     # get entities in for of [(entity, number of atoms)]
     entities =  [ (i,entities.count(i)) for i in set(entities) ]
     properties = np.transpose(np.array(block.find(["_entity_poly.entity_id", "_entity_poly.type"])))
-    print("json")
     properties[1] = [remove_quotation_marks(x) for x in properties[1]]
     print(properties)
     properties2 = np.transpose(np.array(block.find(["_entity.id", "_entity.type"])))

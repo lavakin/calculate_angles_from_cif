@@ -149,7 +149,9 @@ def split_into_entities_and_calculate_parameters():
 
 
 def write_to_csv():
-    with open("my_csvs/" + get_cif_name() + '.csv', 'w', newline='') as file:
+    if not os.path.exists(os.getcwd() + '/my_csvs'):
+        os.mkdir(os.getcwd() + "/my_csvs")
+    with open(os.getcwd() + "/my_csvs/" + get_cif_name() + '.csv', 'w', newline='') as file:
         writer = csv.writer(file, delimiter=';', quotechar='|', quoting=csv.QUOTE_MINIMAL)
         writer.writerow(["step_ID", "d1", "e1", "z1", "a2", "b2", "g2", "d2", "ch1", "ch2", "NN", "CC", "mu", "P1",
                          "t1", "Pn1", "P2", "t2", "Pn2", "nu11", "nu12", "nu13", "nu14", "nu15", "nu21", "nu22", "nu23",
